@@ -43,6 +43,11 @@ import java.util.Arrays;
 import android.widget.ImageView;
 import android.graphics.*;
 
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+import android.os.Handler;
+
 /**
  * 参照（tkwatanabe on 2017/03/23）
  * https://github.com/takehiro224/camera2
@@ -75,8 +80,14 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
     //撮影音のためのMediaActionSound
     private MediaActionSound mSound;
 
+
+    // ----
     // 処理結果の表示用
     private ImageView mImageView;
+    // OpenCVライブラリのロード
+    static {
+        System.loadLibrary("opencv_java3");
+    }
 
     @Override //フラグメントが生成される時
     public void onCreate(Bundle savedInstanceState) {
@@ -160,10 +171,28 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture surface) {
             Bitmap bitmap = mTextureView.getBitmap();
+
+            // 画像データを変換（BitmapのMatファイル変換）
+            Mat mat = new Mat();
+            Utils.bitmapToMat(bitmap,mat);
+
+            // mat をグレーに
+            Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
+            Imgproc.cvtColor(mat, mat, Imgproc.COLOR_GRAY2RGBA, 4);
+
+            //  Bitmap dst に空のBitmapを作成
+            Bitmap dst = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
+            //  MatからBitmapに変換
+            Utils.matToBitmap(mat, dst);
+            mImageView.setImageBitmap(dst);
+
+            //---ここからVer0.01残しておく-----
             //int width = bmp.getWidth();
             //int height = bmp.getHeight();
             //int[] pixels = new int[bmp.getHeight() * bmp.getWidth()];
             //bmp.getPixels(pixels, 0, width, 0, 0, width, height);
+            /*
+            Bitmap bitmap = mTextureView.getBitmap();
             int[] buffer = new int[bitmap.getWidth() * bitmap.getHeight()];
 
             for (int j = 0; j < bitmap.getHeight(); j++){
@@ -185,7 +214,9 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
                     bitmap.getWidth(), bitmap.getHeight());
 
             mImageView.setImageBitmap(bitmap);
-            // mTextureView.setVisibility(View.INVISIBLE);
+            --ここまでVer0.0.1--*/
+
+
         }
     };
 
