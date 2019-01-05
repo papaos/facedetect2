@@ -196,8 +196,9 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
 
             // 画像データを変換（BitmapのMatファイル変換）
             Mat mat = new Mat();
+            Mat mat2 = new Mat();
             Utils.bitmapToMat(bitmap,mat);
-
+            Utils.bitmapToMat(bitmap,mat2);
             // mat をグレーに
             Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
             Imgproc.cvtColor(mat, mat, Imgproc.COLOR_GRAY2RGBA, 4);
@@ -214,7 +215,7 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
                     //Log.i(TAG ,"顔の横幅" + face.width);
                     //Log.i(TAG ,"顔の位置（Y座標）" + face.y);
                     //Log.i(TAG ,"顔の位置（X座標）" + face.x);
-                    Imgproc.rectangle(mat, face.tl(), face.br(), new Scalar(0, 0, 255), 3);
+                    Imgproc.rectangle(mat2, face.tl(), face.br(), new Scalar(0, 0, 255), 3);
                 }
                 //return;
             } else {
@@ -224,9 +225,9 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
 
 
             //  Bitmap dst に空のBitmapを作成
-            Bitmap dst = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
+            Bitmap dst = Bitmap.createBitmap(mat2.width(), mat2.height(), Bitmap.Config.ARGB_8888);
             //  MatからBitmapに変換
-            Utils.matToBitmap(mat, dst);
+            Utils.matToBitmap(mat2, dst);
             mImageView.setImageBitmap(dst);
 
 
