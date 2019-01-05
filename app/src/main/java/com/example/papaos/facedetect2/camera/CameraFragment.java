@@ -52,6 +52,7 @@ import android.graphics.*;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfRect;
+import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 
@@ -201,11 +202,6 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
             Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
             Imgproc.cvtColor(mat, mat, Imgproc.COLOR_GRAY2RGBA, 4);
 
-            //  Bitmap dst に空のBitmapを作成
-            Bitmap dst = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
-            //  MatからBitmapに変換
-            Utils.matToBitmap(mat, dst);
-            mImageView.setImageBitmap(dst);
 
             // カスケード分類器に画像データを与え顔認識
             MatOfRect faceRects = new MatOfRect();
@@ -214,16 +210,26 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
             Log.i(TAG ,"認識された顔の数:" + faceRects.toArray().length);
             if (faceRects.toArray().length > 0) {
                 for (org.opencv.core.Rect face : faceRects.toArray()) {
-                    Log.i(TAG ,"顔の縦幅" + face.height);
-                    Log.i(TAG ,"顔の横幅" + face.width);
-                    Log.i(TAG ,"顔の位置（Y座標）" + face.y);
-                    Log.i(TAG ,"顔の位置（X座標）" + face.x);
+                    //Log.i(TAG ,"顔の縦幅" + face.height);
+                    //Log.i(TAG ,"顔の横幅" + face.width);
+                    //Log.i(TAG ,"顔の位置（Y座標）" + face.y);
+                    //Log.i(TAG ,"顔の位置（X座標）" + face.x);
+                    Imgproc.rectangle(mat, face.tl(), face.br(), new Scalar(0, 0, 255), 3);
                 }
-                return;
+                //return;
             } else {
                 Log.i(TAG ,"顔が検出されませんでした");
-                return;
+                //return;
             }
+
+
+            //  Bitmap dst に空のBitmapを作成
+            Bitmap dst = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
+            //  MatからBitmapに変換
+            Utils.matToBitmap(mat, dst);
+            mImageView.setImageBitmap(dst);
+
+
             //---ここからVer0.01残しておく-----
             //int width = bmp.getWidth();
             //int height = bmp.getHeight();
