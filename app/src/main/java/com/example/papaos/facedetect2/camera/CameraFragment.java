@@ -27,6 +27,7 @@ import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.Surface;
@@ -37,17 +38,35 @@ import android.widget.Toast;
 
 import com.example.papaos.facedetect2.R;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 //--追加--
 import android.widget.ImageView;
 import android.graphics.*;
 
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+
+import static android.content.ContentValues.TAG;
+
 /**
  * 参照（tkwatanabe on 2017/03/23）
  * https://github.com/takehiro224/camera2
  */
 
+/*
+* 参考
+* https://qiita.com/Kuroakira/items/094ecb236da89949d702
+*/
 public class CameraFragment extends Fragment implements View.OnClickListener {
 
     //パーミッションのリクエストコード
@@ -75,8 +94,16 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
     //撮影音のためのMediaActionSound
     private MediaActionSound mSound;
 
+
+    // ----
     // 処理結果の表示用
     private ImageView mImageView;
+    // OpenCVライブラリのロード
+    static {
+        System.loadLibrary("opencv_java3");
+    }
+
+    private CascadeClassifier faceDetetcor;
 
     @Override //フラグメントが生成される時
     public void onCreate(Bundle savedInstanceState) {
@@ -84,6 +111,12 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
         //撮影音をロードする
         mSound = new MediaActionSound();
         mSound.load(MediaActionSound.SHUTTER_CLICK);
+
+        try {
+            vLoadFileXml();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override //フラグメントのUIが生成される時
@@ -160,10 +193,51 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture surface) {
             Bitmap bitmap = mTextureView.getBitmap();
+
+            // 画像データを変換（BitmapのMatファイル変換）
+            Mat mat = new Mat();
+            Mat mat2 = new Mat();
+            Utils.bitmapToMat(bitmap,mat);
+            Utils.bitmapToMat(bitmap,mat2);
+            // mat をグレーに
+            Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
+            Imgproc.cvtColor(mat, mat, Imgproc.COLOR_GRAY2RGBA, 4);
+
+
+            // カスケード分類器に画像データを与え顔認識
+            MatOfRect faceRects = new MatOfRect();
+            faceDetetcor.detectMultiScale(mat, faceRects);
+            // 顔認識の結果の確認
+            Log.i(TAG ,"認識された顔の数:" + faceRects.toArray().length);
+            if (faceRects.toArray().length > 0) {
+                for (org.opencv.core.Rect face : faceRects.toArray()) {
+                    //Log.i(TAG ,"顔の縦幅" + face.height);
+                    //Log.i(TAG ,"顔の横幅" + face.width);
+                    //Log.i(TAG ,"顔の位置（Y座標）" + face.y);
+                    //Log.i(TAG ,"顔の位置（X座標）" + face.x);
+                    Imgproc.rectangle(mat2, face.tl(), face.br(), new Scalar(0, 0, 255), 3);
+                }
+                //return;
+            } else {
+                Log.i(TAG ,"顔が検出されませんでした");
+                //return;
+            }
+
+
+            //  Bitmap dst に空のBitmapを作成
+            Bitmap dst = Bitmap.createBitmap(mat2.width(), mat2.height(), Bitmap.Config.ARGB_8888);
+            //  MatからBitmapに変換
+            Utils.matToBitmap(mat2, dst);
+            mImageView.setImageBitmap(dst);
+
+
+            //---ここからVer0.01残しておく-----
             //int width = bmp.getWidth();
             //int height = bmp.getHeight();
             //int[] pixels = new int[bmp.getHeight() * bmp.getWidth()];
             //bmp.getPixels(pixels, 0, width, 0, 0, width, height);
+            /*
+            Bitmap bitmap = mTextureView.getBitmap();
             int[] buffer = new int[bitmap.getWidth() * bitmap.getHeight()];
 
             for (int j = 0; j < bitmap.getHeight(); j++){
@@ -185,7 +259,9 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
                     bitmap.getWidth(), bitmap.getHeight());
 
             mImageView.setImageBitmap(bitmap);
-            // mTextureView.setVisibility(View.INVISIBLE);
+            --ここまでVer0.0.1--*/
+
+
         }
     };
 
@@ -556,4 +632,37 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
             }
         }
     }
+
+    private void vLoadFileXml() throws IOException {
+        // 顔認識を行うカスケード分類器インスタンスの生成（一度ファイルを書き出してファイルのパスを取得する）
+        // 一度raw配下に格納されたxmlファイルを取得
+        InputStream inStream = this.getActivity().getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
+        File cascadeDir = this.getActivity().getDir("cascade", Context.MODE_PRIVATE);
+        File cascadeFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
+        // 取得したxmlファイルを特定ディレクトリに出力
+        FileOutputStream outStream = null;
+        try {
+            outStream = new FileOutputStream(cascadeFile);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        byte[] buf = new byte[2048];
+        int rdBytes;
+        while ((rdBytes = inStream.read(buf)) != -1) {
+            outStream.write(buf, 0, rdBytes);
+        }
+        outStream.close();
+        inStream.close();
+        // 出力したxmlファイルのパスをCascadeClassifierの引数にする
+        faceDetetcor = new CascadeClassifier(cascadeFile.getAbsolutePath());
+        // CascadeClassifierインスタンスができたら出力したファイルはいらないので削除
+        if (faceDetetcor.empty()) {
+            faceDetetcor = null;
+        } else {
+            cascadeDir.delete();
+            cascadeFile.delete();
+        }
+    }
+
+
 }
