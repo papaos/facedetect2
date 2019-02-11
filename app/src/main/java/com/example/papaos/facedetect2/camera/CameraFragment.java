@@ -95,6 +95,9 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
     private MediaActionSound mSound;
 
 
+    Mat mat;
+    Mat mat2;
+    MatOfRect faceRects;
     // ----
     // 処理結果の表示用
     private ImageView mImageView;
@@ -117,6 +120,9 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        mat = new Mat();
+        mat2 = new Mat();
+        faceRects = new MatOfRect();
     }
 
     @Override //フラグメントのUIが生成される時
@@ -195,8 +201,7 @@ public class CameraFragment extends Fragment implements View.OnClickListener {
             Bitmap bitmap = mTextureView.getBitmap();
 
             // 画像データを変換（BitmapのMatファイル変換）
-            Mat mat = new Mat();
-            Mat mat2 = new Mat();
+
             Utils.bitmapToMat(bitmap,mat);
             Utils.bitmapToMat(bitmap,mat2);
             // mat をグレーに
